@@ -1,9 +1,0 @@
-#!/bin/bash
-
-## A utility script for adding a new user.
-## Non-interactive.
-
-adduser --disabled-password --gecos "$2,,," $1
-
-exit
-

@@ -3,8 +3,8 @@ FROM paullamar3/docker-texlive-full
 MAINTAINER Paul LaMar <pal3@outlook.com>
 
 # Add utility scripts: p_addpkgs, p_adduser
-COPY p_* /usr/local/bin/
-RUN chmod 755 /usr/local/bin/p_*
+COPY clocal/* /usr/local/bin/
+RUN chmod +x /usr/local/bin/*
 
 # Install vim, git, and other packages supporting the IDE.
 # Note that we install a GUI compile of Vim. We don't want the GUI;
@@ -12,41 +12,34 @@ RUN chmod 755 /usr/local/bin/p_*
 RUN p_addpkgs vim-gtk git tree evince wget latexmk xzdec
 
 # Copy the default vimrc and plugin manager for root user
-COPY vimrc     /root/.vimrc
-COPY plug.vim  /root/.vim/autoload/
-
-# Add the vim user
-RUN p_adduser vim Vim
-
-# Copy the default vimrc and plugin manager for vim user
-COPY vimrc /home/vim/.vimrc
-COPY plug.vim  /home/vim/.vim/autoload/
-COPY entrypoint.sh /home/vim/
-
-# Put us in the vim user home folder
-WORKDIR /home/vim/
-# Change the owner from 'root' to 'vim' for the copied files
-RUN chown -R vim .vim .vimrc entrypoint.sh
-
-# Switch to vim user
-USER vim
-
-# Specify default git user and email
-RUN git config --global user.name "Vim" && git config --global user.email "vim@dummy.aaa"
-
-# Install the plugins for Vim
-RUN vim -c "PlugInstall|q|q"
+COPY /skel/vimrc     /root/.vimrc
+COPY /skel/plug.vim  /root/.vim/autoload/
 
 # Add line for the vimtex plugin
-RUN sed -i "s/call plug#end()/Plug 'lervag\/vimtex'\n&/" /home/vim/.vimrc
+RUN sed -i "s/call plug#end()/Plug 'lervag\/vimtex'\n&/" /root/.vimrc
 
-RUN mkdir ltx
-RUN chown vim ltx
+# Add options specific to Vimtex.
+RUN printf "%b" "\n\" Use Evince as viewer.\nlet g:vimtex_view_general_viewer=\"evince\"" >> /root/.vimrc && \
+    printf "%b" "\n\" Use 'chktex' for my syntax checking.\nlet g:syntastic_tex_checkers=['chktex']" >> /root/.vimrc
 
-# Install the new plugins.
-RUN vim -c "PlugInstall|q|q"
+# Also copy these default files into /etc/skel so new users will have them.
+RUN cp /root/.vimrc /etc/skel/ && cp -r /root/.vim /etc/skel/
 
-# Initialize latex user mode
-RUN tlmgr init-usertree
+# Copy the entrypoint script.
+COPY entrypoint.sh /root/
+RUN chmod +x /root/entrypoint.sh
 
-ENTRYPOINT ["/home/vim/entrypoint.sh"]
+
+# # Install the plugins for Vim
+# RUN vim -c "PlugInstall|q|q"
+# 
+# RUN mkdir ltx
+# RUN chown vim ltx
+# 
+# # Install the new plugins.
+# RUN vim -c "PlugInstall|q|q"
+# 
+# # Initialize latex user mode
+# RUN tlmgr init-usertree
+
+ENTRYPOINT ["/root/entrypoint.sh"]

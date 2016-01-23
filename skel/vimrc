@@ -2,6 +2,7 @@
 call plug#begin()
 Plug 'kien/ctrlp.vim'
 Plug 'scrooloose/syntastic'
+Plug 'tpope/vim-surround'
 Plug 'vim-scripts/wombat256.vim'
 Plug 'bling/vim-airline'
 Plug 'tpope/vim-fugitive'

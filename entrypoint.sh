@@ -6,6 +6,7 @@ set -e
 
 USAGE="$(basename "$0") [-h] [-u USER] [-U UID] [-G GID] 
                      [-g GIT_NAME] [-e GIT_EMAIL]
+		     [-d MEDIA_FOLDER]
 		     [ARGS]
 
 This script starts the Vim process inside the 
@@ -24,7 +25,7 @@ to customize how the process is started.
 
      -e GIT_EMAIL  The Git global user.email for the new user.
 
-     ARGS          Additional arguments for this script.
+     ARGS          Additional arguments to pass into Vim.
 
 "
 
@@ -34,9 +35,10 @@ new_uid=""
 new_gid=""
 git_nm=""
 git_email=""
+workdir=""
 
 # Parse any options
-while getopts ":hu:U:G:g:e:" opt; do
+while getopts ":hu:U:G:g:e:d:" opt; do
 	case $opt in
 		h) 
 			echo "$USAGE"
@@ -56,6 +58,9 @@ while getopts ":hu:U:G:g:e:" opt; do
 			;;
 		e)
 			git_email="$OPTARG"
+			;;
+		d)
+			workdir="/media/$OPTARG"
 			;;
 		\?)
 			echo "Invalid option: -$OPTARG" >&2
@@ -80,12 +85,21 @@ fi
 
 if [ -n "$git_nm" -a -n "$git_email" -a -z "$( git config user.name )" ]; then
 	if [ -n "$new_user" ]; then
-		runuser -u "$new_user"  git config --global user.name "$git_nm"
-		runuser -u "$new_user"  git config --global user.email "$git_email"
+		# We have to be in the users home folder (or a subdirectory) for 
+		# the 'git config' command to work.
+		set -x
+		cd /home/$new_user
+		runuser -u "$new_user"  -- git config --global user.name "$git_nm"
+		runuser -u "$new_user"  -- git config --global user.email "$git_email"
+		set +x
 	else
 		git config --global user.name "$git_nm"
 		git config --global user.email "$git_email"
 	fi
+fi
+
+if [ -n "$workdir" ]; then
+	cd "$workdir"
 fi
 
 if [ -n "$new_user" ]; then 
